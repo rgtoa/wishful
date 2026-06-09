@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dev-dist/
+*.local
+.env
+server/.env
+server/deno.lock
+.DS_Store
+.vite/
+
+# Design handoff bundle (kept locally as reference, not part of the app source)
+.design_src/

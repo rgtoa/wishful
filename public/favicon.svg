@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#D2754F"/>
+      <stop offset="1" stop-color="#C25E3C"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- gift box base -->
+  <rect x="150" y="262" width="212" height="150" rx="22" fill="#FFFDF8"/>
+  <rect x="236" y="262" width="40" height="150" fill="#F0D9CC"/>
+  <!-- lid -->
+  <rect x="132" y="226" width="248" height="56" rx="20" fill="#FBF4E9"/>
+  <rect x="236" y="226" width="40" height="56" fill="#F0D9CC"/>
+  <!-- heart rising from the box -->
+  <path d="M256 196c-26-40-92-28-92 24 0 40 52 70 92 100 40-30 92-60 92-100 0-52-66-64-92-24Z" fill="#FFFDF8"/>
+  <path d="M256 210c-18-27-62-19-62 16 0 27 35 47 62 67 27-20 62-40 62-67 0-35-44-43-62-16Z" fill="#C25E3C"/>
+</svg>
