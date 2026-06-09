@@ -70,7 +70,8 @@ export default function Pairing({ who, onPaired }) {
           </>
         ) : mode === 'join' ? (
           <>
-            <input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6}
+            <input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+              placeholder="ABC123" maxLength={6} inputMode="text" autoCapitalize="characters" autoCorrect="off" autoComplete="off" spellCheck={false}
               onKeyDown={e => e.key === 'Enter' && join()} autoFocus style={{ ...box, marginBottom: 14 }} />
             {err && <p style={{ color: '#C0492F', fontSize: 13, textAlign: 'center', margin: '0 0 14px' }}>{err}</p>}
             <Pill tone="solid" size="lg" style={{ width: '100%', marginBottom: 10, opacity: busy ? 0.6 : 1 }} onClick={join}>{busy ? 'Joining…' : 'Join'}</Pill>
