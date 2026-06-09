@@ -1,0 +1,69 @@
+/* Wishful — global styles. Ported from the prototype's <head> keyframes,
+   adapted for a full-viewport mobile-first PWA (no iOS device frame). */
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; padding: 0; height: 100%; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: #E8E2D6;
+  background-image: radial-gradient(120% 90% at 50% 0%, #F1ECE0 0%, #E2DBCC 70%);
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+button { font-family: inherit; color: inherit; }
+input, textarea, select { font-family: inherit; }
+
+/* The app fills the viewport on phones; on wider screens it sits as a centered
+   phone-width column with the warm background showing around it. */
+#root {
+  display: grid;
+  place-items: center;
+}
+.wf-app {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+  margin: 0 auto;
+}
+@media (min-width: 480px) {
+  .wf-app {
+    height: min(100dvh, 920px);
+    border-radius: 26px;
+    box-shadow: 0 40px 90px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06);
+  }
+}
+
+::-webkit-scrollbar { width: 0; height: 0; }
+
+@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes slideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes heartbeat { 0%,100% { transform: scale(1); } 14% { transform: scale(1.22); } 28% { transform: scale(1); } 42% { transform: scale(1.16); } 56% { transform: scale(1); } }
+@keyframes pulseGlow { 0%,100% { box-shadow: 0 4px 14px color-mix(in srgb, var(--you) 50%, transparent); } 50% { box-shadow: 0 4px 22px color-mix(in srgb, var(--you) 78%, transparent); } }
+@keyframes twinkle { 0%,100% { opacity: .55; transform: scale(.82) rotate(-6deg); } 50% { opacity: 1; transform: scale(1.12) rotate(6deg); } }
+@keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes drift { 0%,100% { transform: translate(0,0) rotate(0deg); } 50% { transform: translate(9px,-16px) rotate(8deg); } }
+@keyframes driftB { 0%,100% { transform: translate(0,0) rotate(0deg); } 50% { transform: translate(-13px,-11px) rotate(-9deg); } }
+@keyframes sway { 0%,100% { transform: translateX(0) rotate(-4deg); } 50% { transform: translateX(8px) rotate(5deg); } }
+@keyframes wispSway { 0%,100% { transform: rotate(-3.5deg); } 50% { transform: rotate(3.5deg); } }
+@keyframes blink { 0%,92%,100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes lidPop { 0% { transform: translateY(0) rotate(0); } 55% { transform: translateY(-18px) rotate(-12deg); } 100% { transform: translateY(-14px) rotate(-10deg); } }
+@keyframes heartFloat { 0% { transform: translateY(6px) scale(.6); opacity: 0; } 35% { opacity: 1; } 100% { transform: translateY(-30px) scale(1); opacity: 0; } }
+@keyframes giftLid { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-5px) rotate(-5deg); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes popIn { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+.anim-heartbeat { animation: heartbeat 2.6s ease-in-out infinite; transform-origin: center; }
+.anim-glow { animation: pulseGlow 2.4s ease-in-out infinite; }
+.anim-twinkle { animation: twinkle 2s ease-in-out infinite; }
+.anim-floaty { animation: floaty 3s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-heartbeat,.anim-glow,.anim-twinkle,.anim-floaty { animation: none; }
+}

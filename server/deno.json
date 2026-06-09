@@ -1,0 +1,9 @@
+{
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "dev": "deno run -A --unstable-kv --env-file=.env main.ts"
+  },
+  "imports": {
+    "web-push": "npm:web-push@3.6.7"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "wishful",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Wishful — a wishlist for two. An intimate, two-person shared wishlist PWA.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "sharp": "^0.33.5",
+    "vite": "^6.0.7",
+    "vite-plugin-pwa": "^0.21.1",
+    "workbox-precaching": "^7.4.1"
+  }
+}
