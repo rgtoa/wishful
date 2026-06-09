@@ -77,7 +77,7 @@ const makeCode = () => Array.from({ length: 6 }, () => ALPHABET[Math.floor(Math.
 function freshSpace(code: string) {
   return {
     code, v: 1, createdAt: Date.now(), updatedAt: Date.now(),
-    lists: [], items: [], notifications: [],
+    lists: [], items: [], notifications: [], members: [],
     profiles: { rafael: { name: 'Rafael', avatar: null }, thrisha: { name: 'Thrisha', avatar: null } },
   };
 }
@@ -113,6 +113,23 @@ async function handler(req: Request): Promise<Response> {
       return json({ spaceId });
     }
 
+    // mark this user (rafael/thrisha) as present in the space, so the partner can
+    // see whether the other has joined yet. Bumps version so pollers pick it up.
+    if (path === '/pair/presence' && req.method === 'POST') {
+      const { spaceId, user } = await req.json().catch(() => ({}));
+      if (!spaceId || !user) return json({ error: 'bad request' }, 400);
+      const d = await getSpace(spaceId);
+      if (!d) return json({ error: 'not found' }, 404);
+      if (!Array.isArray(d.members)) d.members = [];
+      if (!d.members.includes(user)) {
+        d.members.push(user);
+        d.v = (d.v || 1) + 1;
+        d.updatedAt = Date.now();
+        await putSpace(spaceId, d);
+      }
+      return json({ members: d.members, v: d.v });
+    }
+
     // read shared state (cheap version check for polling)
     if (path === '/state' && req.method === 'GET') {
       const spaceId = url.searchParams.get('spaceId') || '';
@@ -120,7 +137,7 @@ async function handler(req: Request): Promise<Response> {
       const d = await getSpace(spaceId);
       if (!d) return json({ error: 'not found' }, 404);
       if (since && since === d.v) return json({ unchanged: true, v: d.v });
-      return json({ v: d.v, lists: d.lists, items: d.items, notifications: d.notifications, profiles: d.profiles });
+      return json({ v: d.v, lists: d.lists, items: d.items, notifications: d.notifications, profiles: d.profiles, members: d.members || [] });
     }
 
     // write shared state (optimistic concurrency on version)

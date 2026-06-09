@@ -66,7 +66,7 @@ export function AddItem({ listId, itemId, secret, newList }) {
     if (editing) { store.updateItem(itemId, { ...base, list }); nav.closeSheet(); return; }
     // a brand-new list comes to life only when its first wish is saved
     if (newList) {
-      const id = store.addList({ name: newList.name, cover: newList.cover, ...(newList.secret ? { secret: true, forWho: 'partner' } : {}) });
+      const id = store.addList({ name: newList.name, ...(newList.secret ? { secret: true, forWho: 'partner' } : {}) });
       store.addItem({ ...base, list: id, photo: name.trim().toLowerCase(), added: 'just now', ...(newList.secret ? { secret: true, bought: false } : {}) });
       nav.closeSheet(); nav.celebrateThen('list'); return;
     }
@@ -185,13 +185,11 @@ export function NewList({ secret: secretParam }) {
   const { nav, store } = useApp();
   const [name, setName] = React.useState('');
   const [secret, setSecret] = React.useState(!!secretParam);
-  const covers = ['plant', 'desk', 'kitchen', 'travel', 'books', 'jewelry'];
-  const [cover, setCover] = React.useState('plant');
   const tint = secret ? 'var(--gold)' : 'var(--you)';
   return (
     <>
       <SheetHead title={secret ? 'New secret list' : 'New list'} onClose={() => nav.closeSheet()} doneLabel="Next" doneDisabled={!name.trim()}
-        onDone={() => nav.replaceSheet('AddItem', { newList: { name: name.trim(), cover, secret } })} />
+        onDone={() => nav.replaceSheet('AddItem', { newList: { name: name.trim(), secret } })} />
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '6px 18px 30px' }}>
         <label style={fieldLabel}>List name</label>
         <input value={name} onChange={e => setName(e.target.value)} placeholder={secret ? 'e.g. Gifts for ' + store.partner.name : 'e.g. Apartment things'} autoFocus
@@ -216,16 +214,6 @@ export function NewList({ secret: secretParam }) {
               transform: secret ? 'translateX(18px)' : 'translateX(0)', transition: 'transform .25s cubic-bezier(.32,.72,0,1)' }} />
           </span>
         </button>
-
-        <label style={fieldLabel}>Cover</label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-          {covers.map(c => (
-            <button key={c} onClick={() => setCover(c)} style={{ border: 'none', padding: 0, cursor: 'pointer', borderRadius: 'var(--r)',
-              overflow: 'hidden', boxShadow: cover === c ? `0 0 0 2.5px ${tint}` : 'none' }}>
-              <Pho label={c} tint={tint} h={70} radius="var(--r)" />
-            </button>
-          ))}
-        </div>
       </div>
     </>
   );
@@ -236,16 +224,35 @@ export function EditList({ listId }) {
   const { nav, store } = useApp();
   const list = store.lists.find(l => l.id === listId);
   const [name, setName] = React.useState(list?.name || '');
+  const [coverImage, setCoverImage] = React.useState(list?.coverImage || null);
+  const fileRef = React.useRef();
   if (!list) return null;
-  const save = () => { if (!name.trim()) return; store.renameList(listId, name.trim()); nav.closeSheet(); };
+  const firstItem = store.items.filter(i => i.list === listId)[0];
+  const previewSrc = coverImage || (firstItem && firstItem.image) || null;
+  const previewLabel = coverImage ? '' : (firstItem ? firstItem.photo : 'no wishes yet');
+  const tint = list.secret ? 'var(--gold)' : 'var(--you)';
+  const onFile = (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => setCoverImage(r.result); r.readAsDataURL(f); };
+  const save = () => { if (!name.trim()) return; store.updateList(listId, { name: name.trim(), coverImage: coverImage || null }); nav.closeSheet(); };
   return (
     <>
-      <SheetHead title="Rename list" onClose={() => nav.closeSheet()} doneLabel="Save" doneDisabled={!name.trim()} onDone={save} />
+      <SheetHead title="Edit list" onClose={() => nav.closeSheet()} doneLabel="Save" doneDisabled={!name.trim()} onDone={save} />
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '6px 18px 30px' }}>
         <label style={fieldLabel}>List name</label>
-        <input value={name} onChange={e => setName(e.target.value)} autoFocus
-          onKeyDown={e => e.key === 'Enter' && save()}
-          style={{ ...inputStyle, fontSize: 17, fontWeight: 600 }} />
+        <input value={name} onChange={e => setName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && save()}
+          style={{ ...inputStyle, marginBottom: 20, fontSize: 17, fontWeight: 600 }} />
+
+        <label style={fieldLabel}>Cover</label>
+        <div style={{ position: 'relative', marginBottom: 8 }}>
+          <Pho label={previewLabel} src={previewSrc} tint={tint} h={140} />
+          <input ref={fileRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
+          <div style={{ position: 'absolute', bottom: 10, right: 10, display: 'flex', gap: 8 }}>
+            {coverImage && (
+              <button onClick={() => setCoverImage(null)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--surface)', color: 'var(--ink-soft)', border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, padding: '8px 12px', borderRadius: 999, boxShadow: '0 2px 8px rgba(44,33,24,0.12)' }}><Ic.x size={15} />Use first wish</button>
+            )}
+            <button onClick={() => fileRef.current.click()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--surface)', color: tint, border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, padding: '8px 12px', borderRadius: 999, boxShadow: '0 2px 8px rgba(44,33,24,0.12)' }}><Ic.camera size={15} />Cover photo</button>
+          </div>
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--ink-faint)', margin: '0 2px' }}>No cover photo? The list shows your first wish's photo.</p>
       </div>
     </>
   );
@@ -422,19 +429,35 @@ function SyncCard({ store }) {
   const { nav } = useApp();
   const [perm, setPerm] = React.useState(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
   const [busy, setBusy] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
   const enable = async () => { setBusy(true); const res = await store.enableNotifications(); setBusy(false); setPerm(res === 'granted' ? 'granted' : (res === 'unsupported' ? 'unsupported' : 'denied')); };
   return (
     <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: 16, marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: store.synced ? 12 : 0 }}>
-        <span style={{ width: 36, height: 36, borderRadius: 10, background: store.synced ? 'var(--you-soft)' : 'var(--surface2)', color: store.synced ? 'var(--you)' : 'var(--ink-faint)', display: 'grid', placeItems: 'center', flexShrink: 0 }}><Ic.heart size={18} /></span>
+        <span style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center',
+          background: !store.synced ? 'var(--surface2)' : store.partnerJoined ? 'var(--you-soft)' : 'color-mix(in srgb, var(--gold) 18%, var(--surface))',
+          color: !store.synced ? 'var(--ink-faint)' : store.partnerJoined ? 'var(--you)' : 'var(--gold)' }}>
+          {store.partnerJoined ? <Ic.heart size={18} /> : <Ic.lock size={18} />}
+        </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14.5 }}>{store.synced ? 'Paired & syncing' : 'Not paired'}</div>
+          <div style={{ fontWeight: 700, fontSize: 14.5 }}>{!store.synced ? 'Not paired' : store.partnerJoined ? 'Paired & syncing' : 'Waiting for ' + store.partner.name}</div>
           <div style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
-            {store.synced ? `Shared space · code ${store.space.code || '••••'}` : 'Connect with your partner on next unlock.'}
+            {!store.synced ? 'Connect with your partner on next unlock.' : store.partnerJoined ? 'Synced with ' + store.partner.name : store.partner.name + " hasn't joined yet"}
           </div>
         </div>
         {store.synced && <button onClick={() => nav.confirm({ title: 'Unpair this device?', body: `You'll stop syncing with ${store.partner.name} and need a new code to reconnect. Your wishes stay safe on the server.`, confirmLabel: 'Unpair', danger: true, onConfirm: store.unpair })} style={{ border: 'none', background: 'var(--surface2)', color: 'var(--ink-soft)', borderRadius: 999, padding: '7px 12px', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>Unpair</button>}
       </div>
+
+      {store.synced && !store.partnerJoined && store.space && store.space.code && (
+        <button onClick={() => { if (navigator.clipboard) navigator.clipboard.writeText(store.space.code); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+          style={{ width: '100%', border: 'none', cursor: 'pointer', background: 'var(--surface2)', borderRadius: 'var(--r)', padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <span style={{ fontSize: 12.5, color: 'var(--ink-soft)', fontWeight: 600 }}>Share this code with {store.partner.name}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
+            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 18, fontWeight: 700, letterSpacing: 3, color: 'var(--ink)' }}>{store.space.code}</span>
+            <span style={{ color: copied ? 'var(--you)' : 'var(--ink-faint)', display: 'inline-flex' }}>{copied ? <Ic.check size={17} /> : <Ic.copy size={17} />}</span>
+          </span>
+        </button>
+      )}
       {store.synced && perm !== 'granted' && (
         <button onClick={enable} disabled={busy || perm === 'unsupported'} style={{ width: '100%', border: 'none', cursor: perm === 'unsupported' ? 'default' : 'pointer',
           background: perm === 'denied' || perm === 'unsupported' ? 'var(--surface2)' : 'var(--you)', color: perm === 'denied' || perm === 'unsupported' ? 'var(--ink-soft)' : '#fff',
@@ -529,7 +552,6 @@ export function ItemMenu({ itemId }) {
       <SheetHead title={it.name} onClose={() => nav.closeSheet()} />
       <div style={{ padding: '0 0 18px' }}>
         {opt(<Ic.edit size={19} />, 'Edit details', () => nav.replaceSheet('AddItem', { itemId }))}
-        {opt(<Ic.share size={19} />, 'Share item', () => nav.closeSheet())}
         {opt(<Ic.bookmark size={19} />, 'Move to another list', () => nav.closeSheet())}
         {opt(<Ic.trash size={19} />, 'Delete', () => nav.confirm({ title: 'Delete this wish?', body: 'It moves to Recently deleted for 30 days — you can restore it from your profile.', confirmLabel: 'Delete', danger: true, onConfirm: () => { store.deleteItem(itemId); nav.closeSheet(); nav.pop(); } }), true)}
       </div>
@@ -550,8 +572,7 @@ export function ListMenu({ listId }) {
       <SheetHead title={l ? l.name : ''} onClose={() => nav.closeSheet()} />
       <div style={{ padding: '0 0 18px' }}>
         {opt(<Ic.plus size={19} />, 'Add an item', () => nav.replaceSheet('AddItem', { listId }))}
-        {opt(<Ic.edit size={19} />, 'Rename list', () => nav.replaceSheet('EditList', { listId }))}
-        {opt(<Ic.share size={19} />, 'Share list', () => nav.replaceSheet('Share'))}
+        {opt(<Ic.edit size={19} />, 'Edit list', () => nav.replaceSheet('EditList', { listId }))}
         {opt(<Ic.trash size={19} />, 'Delete list', () => nav.confirm({ title: 'Delete this list?', body: 'The list is removed and its wishes move to Recently deleted.', confirmLabel: 'Delete list', danger: true, onConfirm: () => { store.deleteList(listId); nav.closeSheet(); nav.pop(); } }), true)}
       </div>
     </>

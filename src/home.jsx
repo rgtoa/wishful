@@ -24,7 +24,7 @@ export function ListCard({ list, items, onClick }) {
     onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
     onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
       <div style={{ position: 'relative' }}>
-        <Ph label={cover ? cover.photo : 'empty'} src={cover && cover.image} tint={tint} h={108} radius="calc(var(--r-lg) - 5px)" />
+        <Ph label={list.coverImage ? '' : (cover ? cover.photo : 'empty')} src={list.coverImage || (cover && cover.image)} tint={tint} h={108} radius="calc(var(--r-lg) - 5px)" />
         <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 5 }}>
           {reservedCount > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--surface)',

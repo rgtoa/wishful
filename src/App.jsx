@@ -37,6 +37,7 @@ export default function App() {
 
   // ── sync (only active when a backend is configured AND this device is paired)
   const [space, setSpace] = usePersistentState('space', null);
+  const [members, setMembers] = useState([]); // which of rafael/thrisha have joined this space
   const synced = API_CONFIGURED && !!space;
   const versionRef = useRef(0);
   const applyingRemote = useRef(false);
@@ -46,6 +47,7 @@ export default function App() {
     setLists(s.lists || []);
     setItems(s.items || []);
     setNotifs(s.notifications || []);
+    if (s.members) setMembers(s.members);
     if (s.profiles) {
       setNames({ rafael: s.profiles.rafael?.name || 'Rafael', thrisha: s.profiles.thrisha?.name || 'Thrisha' });
       setAvatars({ rafael: s.profiles.rafael?.avatar || null, thrisha: s.profiles.thrisha?.avatar || null });
@@ -53,17 +55,19 @@ export default function App() {
     versionRef.current = s.v;
   };
 
-  // adopt server state on (re)pair / reload
+  // adopt server state on (re)pair / reload; announce our presence so the partner
+  // can see we've joined.
   useEffect(() => {
     if (!synced) return;
     let alive = true;
     versionRef.current = 0;
     (async () => {
+      try { await api.presence(space.spaceId, currentUser); } catch { /* offline */ }
       const r = await api.getState(space.spaceId);
       if (alive && r.ok && r.data && r.data.v) applyRemote(r.data);
     })();
     return () => { alive = false; };
-  }, [synced, space && space.spaceId]);
+  }, [synced, space && space.spaceId, currentUser]);
 
   // push local edits up (debounced); skip the echo of a change we just pulled
   useEffect(() => {
@@ -128,6 +132,7 @@ export default function App() {
     toggleBought: (id) => setItems(p => p.map(i => i.id === id ? { ...i, bought: !i.bought } : i)),
     addList: (d) => { const id = uid('nl'); setLists(p => [...p, { ...d, owner: currentUser, id }]); return id; },
     renameList: (id, name) => setLists(p => p.map(l => l.id === id ? { ...l, name } : l)),
+    updateList: (id, d) => setLists(p => p.map(l => l.id === id ? { ...l, ...d } : l)),
     deleteList: (id) => { setItems(p => p.map(i => i.list === id ? { ...i, deletedAt: Date.now() } : i)); setLists(p => p.filter(l => l.id !== id)); },
     addComment: (itemId, text) => {
       const it = items.find(i => i.id === itemId);
@@ -141,9 +146,10 @@ export default function App() {
     markNotifRead: (id) => setNotifs(p => p.map(n => n.id === id ? { ...n, read: true } : n)),
     markAllNotifsRead: () => setNotifs(p => p.map(n => n.forUser === currentUser ? { ...n, read: true } : n)),
     // pairing / push surface (used by Profile when a backend is configured)
-    apiConfigured: API_CONFIGURED, synced, space,
+    apiConfigured: API_CONFIGURED, synced, space, members,
+    partnerJoined: members.includes(them),
     enableNotifications: () => synced ? enablePush(space.spaceId, currentUser) : Promise.resolve('unsupported'),
-    unpair: () => setSpace(null),
+    unpair: () => { setSpace(null); setMembers([]); },
   };
 
   // ── navigation / routing
@@ -220,7 +226,7 @@ export default function App() {
   };
 
   const Base = SCREENS[tab] || SCREENS.Home;
-  const tallSheet = sheet && (sheet.name === 'AddItem' || sheet.name === 'NewList' || sheet.name === 'Personalize');
+  const tallSheet = sheet && (sheet.name === 'AddItem' || sheet.name === 'NewList' || sheet.name === 'EditList' || sheet.name === 'Personalize');
   const curSheet = sheet || sheetCache.current;
 
   const tabBarVisible = stack.length === 0 && !showOnb && !showSplash && !locked && !showPair && !celebrate;
