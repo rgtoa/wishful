@@ -654,7 +654,14 @@ function fmtMoney(v, code) {
   return c.symbol + (c.symbol.length > 1 ? ' ' : '') + Number(v).toLocaleString();
 }
 function readPerson(name, items, season) {
-  if (!items.length) return `${name} hasn't added a single wish yet — a totally blank slate. Bold, mysterious, impossible to shop for. ${season.emoji}`;
+  if (!items.length) {
+    const lines = [
+      `${name} hasn't wished for a thing yet — a clean slate the genie can't wait to fill.`,
+      `${name}'s list is empty for now: pure potential, zero clutter, maximum mystery.`,
+      `Nothing on ${name}'s list yet — add a wish and watch me work.`,
+    ];
+    return lines[(name.charCodeAt(0) || 0) % lines.length] + ' ' + season.emoji;
+  }
   const n = items.length;
   const top = [...items].sort((a, b) => (b.prio - a.prio) || ((b.price || 0) - (a.price || 0)))[0];
   const dream = items.filter(i => i.prio === 2);
@@ -669,7 +676,7 @@ function readPerson(name, items, season) {
   return s;
 }
 function readCouple(youName, themName, youItems, themItems, season) {
-  if (!youItems.length && !themItems.length) return `Two empty lists and a lot of optimism. Add a few wishes and I'll have real material to tease you both with. ${season.emoji}`;
+  if (!youItems.length && !themItems.length) return `Two empty lists, one shared genie, infinite potential. Add your first wishes and I'll start reading you both — lovingly, of course. ${season.emoji}`;
   const all = [...youItems, ...themItems];
   const total = all.reduce((s, i) => s + (i.price || 0), 0);
   const cur = (all.find(i => i.price != null) || {}).currency;
@@ -703,13 +710,19 @@ export function Genie() {
   const [data, setData] = React.useState(null);
   const [err, setErr] = React.useState(false);
   const youName = store.you.name, themName = store.partner.name;
+  const youItems = store.items.filter(i => i.owner === 'you' && !i.secret);
+  const themItems = store.items.filter(i => i.owner === 'partner' && !i.secret);
+  // Everything the reading depends on. When any wish is added / edited / removed
+  // (or a name changes), this string changes and the Genie re-reads from scratch.
+  const sig = JSON.stringify({
+    y: youItems.map(i => [i.name, i.prio, i.price, i.store]),
+    t: themItems.map(i => [i.name, i.prio, i.price, i.store]),
+    youName, themName, k: season.key,
+  });
 
   React.useEffect(() => {
     let alive = true;
-    const youItems = store.items.filter(i => i.owner === 'you' && !i.secret);
-    const themItems = store.items.filter(i => i.owner === 'partner' && !i.secret);
-    // Rich, item-aware description — used by the optional AI bridge, and mirrors
-    // what the built-in local reader works from.
+    setLoading(true); setData(null);
     const describe = (arr) => arr.length
       ? arr.map(i => `${i.name} (${['on the radar', 'really wants it', 'dream item'][i.prio] || 'wants it'}${i.store ? ', from ' + i.store : ''}${i.price != null ? ', ' + fmtMoney(i.price, i.currency) : ''})`).join('; ')
       : 'nothing yet';
@@ -718,24 +731,25 @@ ${youName}'s wishes: ${describe(youItems)}.
 ${themName}'s wishes: ${describe(themItems)}.
 Return ONLY minified JSON, no markdown, exact shape:
 {"you":"2 witty sentences about ${youName} from their actual wishes","them":"2 witty sentences about ${themName}","compare":"2-3 funny, warm sentences comparing them as a couple from their lists"}`;
+    // Optional AI bridge: wire `window.WISHFUL_GENIE = { complete }` (proxying a
+    // server-side Claude API call) for LLM-written insights. Without it we use a
+    // built-in reader that derives the insights from the real list data.
+    const complete = (window.WISHFUL_GENIE && window.WISHFUL_GENIE.complete) || (window.claude && window.claude.complete);
+    if (!complete) {
+      const tm = setTimeout(() => { if (alive) { setData(localInsights(youName, themName, youItems, themItems, season)); setLoading(false); } }, 600);
+      return () => { alive = false; clearTimeout(tm); };
+    }
     (async () => {
       try {
-        // Optional AI bridge: wire `window.WISHFUL_GENIE = { complete }` (proxying a
-        // server-side Claude API call) for LLM-written insights. Without it we use a
-        // built-in reader that derives the insights from the real list data below.
-        const complete = (window.WISHFUL_GENIE && window.WISHFUL_GENIE.complete)
-          || (window.claude && window.claude.complete);
-        if (!complete) throw new Error('no api');
         const raw = await complete(prompt);
         const json = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
         if (alive) { setData(json); setLoading(false); }
       } catch (e) {
-        // brief "summoning" beat, then the data-driven reading
-        setTimeout(() => { if (alive) { setData(localInsights(youName, themName, youItems, themItems, season)); setLoading(false); } }, 650);
+        if (alive) { setData(localInsights(youName, themName, youItems, themItems, season)); setLoading(false); }
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [sig]);
 
   const Block = ({ who, label, text, delay }) => (
     <Reveal delay={delay}>
