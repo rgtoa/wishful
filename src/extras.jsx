@@ -4,6 +4,7 @@ import React from 'react';
 const { useState, useEffect, useRef, useLayoutEffect } = React;
 import { I as Ix } from './icons.jsx';
 import { Avatar as Avx, Photo as Phx, PriorityPips as Ppx, Money as Mox } from './primitives.jsx';
+import { CURRENCIES } from './theme.js';
 import { useApp } from './context.js';
 import { Screen, PushBar, Reveal, HeartBurst } from './shared.jsx';
 import { SheetHead } from './flows.jsx';
@@ -645,6 +646,56 @@ function GenieCharacter({ season, size = 138 }) {
   );
 }
 
+// Build a witty "reading" straight from the couple's real wishes — no LLM, so it
+// always reflects exactly what's on their lists.
+function fmtMoney(v, code) {
+  if (v == null) return '';
+  const c = CURRENCIES.find(x => x.code === (code || 'PHP')) || CURRENCIES[0];
+  return c.symbol + (c.symbol.length > 1 ? ' ' : '') + Number(v).toLocaleString();
+}
+function readPerson(name, items, season) {
+  if (!items.length) return `${name} hasn't added a single wish yet — a totally blank slate. Bold, mysterious, impossible to shop for. ${season.emoji}`;
+  const n = items.length;
+  const top = [...items].sort((a, b) => (b.prio - a.prio) || ((b.price || 0) - (a.price || 0)))[0];
+  const dream = items.filter(i => i.prio === 2);
+  const priciest = [...items].filter(i => i.price != null).sort((a, b) => b.price - a.price)[0];
+  const stores = [...new Set(items.map(i => i.store).filter(Boolean))];
+  let s = `${name}'s list runs ${n} wish${n > 1 ? 'es' : ''} deep, anchored by “${top.name}”${top.store ? ` from ${top.store}` : ''}`;
+  if (dream.length) s += ` — ${dream.length} of them flagged full-on dream item${dream.length > 1 ? 's' : ''} (no notes, just yearning)`;
+  s += '.';
+  if (priciest && priciest.price != null && priciest.name !== top.name) s += ` Big-ticket energy: ${priciest.name} at ${fmtMoney(priciest.price, priciest.currency)}.`;
+  if (stores.length >= 3) s += ` A devoted ${stores.slice(0, 3).join(' / ')} shopper.`;
+  else if (stores.length) s += ` Fiercely loyal to ${stores[0]}.`;
+  return s;
+}
+function readCouple(youName, themName, youItems, themItems, season) {
+  if (!youItems.length && !themItems.length) return `Two empty lists and a lot of optimism. Add a few wishes and I'll have real material to tease you both with. ${season.emoji}`;
+  const all = [...youItems, ...themItems];
+  const total = all.reduce((s, i) => s + (i.price || 0), 0);
+  const cur = (all.find(i => i.price != null) || {}).currency;
+  const yt = youItems.reduce((s, i) => s + (i.price || 0), 0);
+  const tt = themItems.reduce((s, i) => s + (i.price || 0), 0);
+  const yd = youItems.filter(i => i.prio === 2).length, td = themItems.filter(i => i.prio === 2).length;
+  const shared = [...new Set(youItems.map(i => i.store).filter(st => st && themItems.some(j => j.store === st)))];
+  let s = `Between you there are ${all.length} wish${all.length > 1 ? 'es' : ''}`;
+  if (total > 0) s += `, worth roughly ${fmtMoney(total, cur)} all told`;
+  s += '. ';
+  if (yt > tt * 1.3) s += `${youName} clearly has the pricier taste; ${themName} keeps it grounded. `;
+  else if (tt > yt * 1.3) s += `${themName}'s list is the spendier one; ${youName} plays it cool. `;
+  else if (yt || tt) s += `You're eerily matched on budget — a real hazard to your shared savings. `;
+  if (shared.length) s += `You even overlap at ${shared[0]}, which is either adorable or a turf war. `;
+  if (yd || td) s += `${yd === td ? 'You tie on dream items' : (yd > td ? youName + ' dreams bigger' : themName + ' dreams bigger')} — noted. 💛`;
+  else s += `Neither of you is dreaming big enough yet; add one outrageous splurge each. 💛`;
+  return s;
+}
+function localInsights(youName, themName, youItems, themItems, season) {
+  return {
+    you: readPerson(youName, youItems, season),
+    them: readPerson(themName, themItems, season),
+    compare: readCouple(youName, themName, youItems, themItems, season),
+  };
+}
+
 export function Genie() {
   const { nav, store } = useApp();
   const season = React.useMemo(seasonOf, []);
@@ -655,19 +706,23 @@ export function Genie() {
 
   React.useEffect(() => {
     let alive = true;
-    const youW = store.items.filter(i => i.owner === 'you' && !i.secret).map(i => i.name).join(', ');
-    const themW = store.items.filter(i => i.owner === 'partner' && !i.secret).map(i => i.name).join(', ');
-    const prompt = `You are ${season.name} ${season.emoji}, a witty, mischievous gift genie inside a couple's wishlist app. You are reading two people's wishlists and roasting them affectionately. Be genuinely funny, clever, and a little cheeky — like a perceptive best friend who teases with love. Stay lightly in-character/seasonal. Max 1 emoji per section. Don't be generic or saccharine; make specific, surprising observations about their actual items.
-${youName}'s wishes: ${youW || 'none yet'}.
-${themName}'s wishes: ${themW || 'none yet'}.
-Return ONLY minified JSON, no markdown, with this exact shape:
-{"you":"2 witty sentences reading ${youName}'s personality from their wishes","them":"2 witty sentences reading ${themName}'s personality","compare":"2-3 funny, warm sentences comparing the two of them as a couple based on their lists"}`;
+    const youItems = store.items.filter(i => i.owner === 'you' && !i.secret);
+    const themItems = store.items.filter(i => i.owner === 'partner' && !i.secret);
+    // Rich, item-aware description — used by the optional AI bridge, and mirrors
+    // what the built-in local reader works from.
+    const describe = (arr) => arr.length
+      ? arr.map(i => `${i.name} (${['on the radar', 'really wants it', 'dream item'][i.prio] || 'wants it'}${i.store ? ', from ' + i.store : ''}${i.price != null ? ', ' + fmtMoney(i.price, i.currency) : ''})`).join('; ')
+      : 'nothing yet';
+    const prompt = `You are ${season.name} ${season.emoji}, a witty, mischievous gift genie inside a couple's wishlist app. Read these two people's ACTUAL wishlists and give a specific, affectionate roast — reference their real items, prices, and priorities. Be funny and a little cheeky, never generic. Max 1 emoji per section.
+${youName}'s wishes: ${describe(youItems)}.
+${themName}'s wishes: ${describe(themItems)}.
+Return ONLY minified JSON, no markdown, exact shape:
+{"you":"2 witty sentences about ${youName} from their actual wishes","them":"2 witty sentences about ${themName}","compare":"2-3 funny, warm sentences comparing them as a couple from their lists"}`;
     (async () => {
       try {
-        // Optional AI bridge: if a `window.claude.complete` (or `WISHFUL_GENIE`)
-        // hook is provided by a host/backend, use it; otherwise fall back to a
-        // hand-written reading below. A real deployment can wire `window.WISHFUL_GENIE`
-        // to a server endpoint that calls the Claude API (keys must stay server-side).
+        // Optional AI bridge: wire `window.WISHFUL_GENIE = { complete }` (proxying a
+        // server-side Claude API call) for LLM-written insights. Without it we use a
+        // built-in reader that derives the insights from the real list data below.
         const complete = (window.WISHFUL_GENIE && window.WISHFUL_GENIE.complete)
           || (window.claude && window.claude.complete);
         if (!complete) throw new Error('no api');
@@ -675,13 +730,8 @@ Return ONLY minified JSON, no markdown, with this exact shape:
         const json = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
         if (alive) { setData(json); setLoading(false); }
       } catch (e) {
-        if (!alive) return;
-        setData({
-          you: `${youName}, my friend, your list is a love letter to “I'll use it forever” — quietly fancy, allergic to clutter, and secretly proud of it.`,
-          them: `${themName} is building a soft, glowy little universe one ceramic and one gold thing at a time. Cozy maximalist energy, and honestly? Iconic.`,
-          compare: `One of you romanticises the everyday, the other romanticises the weekend — together you're a very well-dressed hazard to each other's savings. Your lists basically hold hands.`,
-        });
-        setErr(true); setLoading(false);
+        // brief "summoning" beat, then the data-driven reading
+        setTimeout(() => { if (alive) { setData(localInsights(youName, themName, youItems, themItems, season)); setLoading(false); } }, 650);
       }
     })();
     return () => { alive = false; };
