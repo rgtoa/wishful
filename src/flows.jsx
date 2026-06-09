@@ -552,8 +552,37 @@ export function ItemMenu({ itemId }) {
       <SheetHead title={it.name} onClose={() => nav.closeSheet()} />
       <div style={{ padding: '0 0 18px' }}>
         {opt(<Ic.edit size={19} />, 'Edit details', () => nav.replaceSheet('AddItem', { itemId }))}
-        {opt(<Ic.bookmark size={19} />, 'Move to another list', () => nav.closeSheet())}
+        {opt(<Ic.bookmark size={19} />, 'Move to another list', () => nav.replaceSheet('MoveItem', { itemId }))}
         {opt(<Ic.trash size={19} />, 'Delete', () => nav.confirm({ title: 'Delete this wish?', body: 'It moves to Recently deleted for 30 days — you can restore it from your profile.', confirmLabel: 'Delete', danger: true, onConfirm: () => { store.deleteItem(itemId); nav.closeSheet(); nav.pop(); } }), true)}
+      </div>
+    </>
+  );
+}
+
+// ───────────────────────────────── MOVE ITEM TO ANOTHER LIST
+export function MoveItem({ itemId }) {
+  const { nav, store } = useApp();
+  const item = store.items.find(i => i.id === itemId);
+  if (!item) return null;
+  const mine = item.owner === 'you';
+  const isSecret = !!item.secret;
+  // eligible targets: your own lists of the same kind (secret ↔ secret), excluding the current one
+  const targets = store.lists.filter(l => l.owner === 'you' && !!l.secret === isSecret && l.id !== item.list);
+  return (
+    <>
+      <SheetHead title="Move to…" onClose={() => nav.closeSheet()} />
+      <div style={{ padding: '0 0 18px' }}>
+        {!mine ? (
+          <div style={{ padding: '22px 20px', textAlign: 'center', color: 'var(--ink-soft)', fontSize: 14, lineHeight: 1.5 }}>You can only move your own wishes.</div>
+        ) : targets.length === 0 ? (
+          <div style={{ padding: '22px 20px', textAlign: 'center', color: 'var(--ink-soft)', fontSize: 14, lineHeight: 1.5 }}>No other {isSecret ? 'secret ' : ''}list to move this into yet — make one first.</div>
+        ) : targets.map(l => (
+          <button key={l.id} onClick={() => { store.updateItem(itemId, { list: l.id }); nav.closeSheet(); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 13, width: '100%', border: 'none', background: 'none', padding: '14px 18px', cursor: 'pointer', textAlign: 'left', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: 16, fontWeight: 500, borderBottom: '0.5px solid var(--line)' }}>
+            <span style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface2)', color: isSecret ? 'var(--gold)' : 'var(--you)', display: 'grid', placeItems: 'center', flexShrink: 0 }}><Ic.bookmark size={16} /></span>
+            {l.name}
+          </button>
+        ))}
       </div>
     </>
   );
