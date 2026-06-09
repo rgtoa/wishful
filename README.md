@@ -83,7 +83,7 @@ Vite + React (no device frame, no build-time JSX-in-browser). Source in `src/`:
 | `api.js` / `push.js` | Backend client + Web Push subscription helpers |
 | `Pairing.jsx` | Pair-your-two-phones screen (create/join a shared space) |
 | `sw.js` | Custom service worker — offline precache + push + notification click |
-| `server/main.ts` | The backend (Deno Deploy + Deno KV + Web Push) |
+| `server/main.ts` | The backend (Deno Deploy + Upstash Redis + Web Push) |
 
 ### Persistence & sync
 
@@ -93,7 +93,7 @@ backend is configured.
 
 When you set `VITE_API_URL`, the app turns on **two-phone sync**: the two of you
 pair into one shared space (a 6-char code), your lists/items/comments live in a
-versioned **Deno KV** document, and changes flow both ways (optimistic write +
+versioned document in **Upstash Redis** (persists across deploys), and changes flow both ways (optimistic write +
 ~4s polling). Comments on your partner's wish fire a **Web Push** notification to
 their phone even when the app is closed. Personal theme/accent/dark-mode stay
 local to each device by design. The lock screen still gates every launch.

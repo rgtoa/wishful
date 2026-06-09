@@ -24,26 +24,37 @@ npx web-push generate-vapid-keys
 Keep the `publicKey` and `privateKey`. The public one is safe to expose; the
 private one is a secret.
 
-## 2. Deploy the backend to Deno Deploy (free)
+## 2a. Create a free database (Upstash Redis — no card)
+
+Data lives in Upstash Redis so it **persists across redeploys** (Deno Deploy's
+built-in KV is per-deployment and gets wiped on each build — don't use it).
+
+1. Sign up at <https://upstash.com> (GitHub/Google login, no card).
+2. **Create Database** → Redis → pick a region near you → Free tier.
+3. Open the database → **REST API** panel → copy **`UPSTASH_REDIS_REST_URL`** and
+   **`UPSTASH_REDIS_REST_TOKEN`**.
+
+## 2b. Deploy the backend to Deno Deploy (free)
 
 1. Push this repo to GitHub.
 2. Go to <https://deno.com/deploy> and sign in with GitHub (no card required).
-3. **New Project** → link your repo. Set the **entrypoint** to `server/main.ts`.
-   Deno Deploy reads `server/deno.json`, so npm deps (`web-push`) and Deno KV are
-   handled automatically.
-4. In the project's **Settings → Environment Variables**, add:
+3. **Create app** → link your repo, branch `main`. Use **No Preset**, leave install
+   and build commands empty, set **Runtime → Dynamic App → Entrypoint** to
+   `server/main.ts`. (Deno reads `server/deno.json` for the `web-push` dep.)
+4. In **Settings → Environment Variables**, add:
 
    | Key | Value |
    | --- | --- |
+   | `UPSTASH_REDIS_REST_URL` | from Upstash (step 2a) |
+   | `UPSTASH_REDIS_REST_TOKEN` | from Upstash (secret) |
    | `VAPID_PUBLIC_KEY` | your public key from step 1 |
    | `VAPID_PRIVATE_KEY` | your private key from step 1 |
    | `VAPID_SUBJECT` | `mailto:you@example.com` |
-   | `ALLOW_ORIGIN` | the exact origin of your app (e.g. `https://wishful.pages.dev`), or `*` to allow any |
+   | `ALLOW_ORIGIN` | the exact origin of your app, or `*` |
 
-5. Deploy. You'll get a URL like `https://wishful-xxxx.deno.dev`. Open
-   `…/health` — it should return `{"ok":true,"pushEnabled":true}`.
-
-> Deno KV persists data across deploys; the free tier is ample for two people.
+5. Deploy. Open `…/health` — it should return
+   `{"ok":true,"pushEnabled":true,"store":"redis"}`. If `store` says `memory`,
+   the Upstash vars aren't set right (data won't persist).
 
 ## 3. Point the app at the backend
 
