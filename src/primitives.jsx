@@ -115,6 +115,35 @@ export function Sheet({ open, onClose, children, height = 'auto', tall }) {
   );
 }
 
+// Centered confirmation dialog (mounts on open, animates in/out like the Sheet)
+export function Confirm({ open, title, body, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger, onConfirm, onCancel }) {
+  const [mounted, setMounted] = React.useState(open);
+  const [reveal, setReveal] = React.useState(false);
+  React.useEffect(() => {
+    let t;
+    if (open) { setMounted(true); t = setTimeout(() => setReveal(true), 20); }
+    else { setReveal(false); t = setTimeout(() => setMounted(false), 240); }
+    return () => clearTimeout(t);
+  }, [open]);
+  if (!mounted) return null;
+  const btn = { flex: 1, border: 'none', borderRadius: 999, padding: '13px', cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15 };
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 500, display: 'grid', placeItems: 'center', padding: 24 }}>
+      <div onClick={onCancel} style={{ position: 'absolute', inset: 0, background: 'rgba(28,20,14,0.42)', opacity: reveal ? 1 : 0, transition: 'opacity .2s', backdropFilter: reveal ? 'blur(2px)' : 'none' }} />
+      <div style={{ position: 'relative', width: '100%', maxWidth: 320, background: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '22px 20px 16px',
+        boxShadow: '0 20px 50px rgba(28,20,14,0.3)', textAlign: 'center',
+        transform: reveal ? 'scale(1)' : 'scale(.9)', opacity: reveal ? 1 : 0, transition: 'transform .22s cubic-bezier(.34,1.56,.64,1), opacity .22s' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'var(--display-italic)', fontWeight: 'var(--display-weight)', fontSize: 22, marginBottom: 8 }}>{title}</div>
+        {body && <p style={{ margin: '0 0 18px', fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.45 }}>{body}</p>}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onCancel} style={{ ...btn, background: 'color-mix(in srgb, var(--ink) 8%, transparent)', color: 'var(--ink)' }}>{cancelLabel}</button>
+          <button onClick={onConfirm} style={{ ...btn, background: danger ? '#C0492F' : 'var(--you)', color: '#fff' }}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Soft pill button
 export function Pill({ children, onClick, tone = 'ghost', size = 'md', style, icon }) {
   const tones = {

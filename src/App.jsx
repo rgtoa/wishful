@@ -7,7 +7,7 @@ import { SEED } from './data.js';
 import { SCREENS } from './registry.js';
 import { useTweaks, usePersistentState } from './persist.js';
 import { I } from './icons.jsx';
-import { Sheet } from './primitives.jsx';
+import { Sheet, Confirm } from './primitives.jsx';
 import { PatternLock, Splash, Celebrate } from './extras.jsx';
 import { Onboarding } from './flows.jsx';
 import Pairing from './Pairing.jsx';
@@ -127,6 +127,8 @@ export default function App() {
     toggleReserve: (id) => setItems(p => p.map(i => i.id === id ? { ...i, reserved: !i.reserved } : i)),
     toggleBought: (id) => setItems(p => p.map(i => i.id === id ? { ...i, bought: !i.bought } : i)),
     addList: (d) => { const id = uid('nl'); setLists(p => [...p, { ...d, owner: currentUser, id }]); return id; },
+    renameList: (id, name) => setLists(p => p.map(l => l.id === id ? { ...l, name } : l)),
+    deleteList: (id) => { setItems(p => p.map(i => i.list === id ? { ...i, deletedAt: Date.now() } : i)); setLists(p => p.filter(l => l.id !== id)); },
     addComment: (itemId, text) => {
       const it = items.find(i => i.id === itemId);
       setItems(p => p.map(i => i.id === itemId ? { ...i, comments: [...(i.comments || []), { by: currentUser, text, at: Date.now() }] } : i));
@@ -156,6 +158,9 @@ export default function App() {
   const [sheet, setSheet] = useState(null);
   const sheetCache = useRef(null);
   if (sheet) sheetCache.current = sheet;
+  const [confirm, setConfirm] = useState(null);
+  const confirmCache = useRef(null);
+  if (confirm) confirmCache.current = confirm;
 
   const nav = {
     go: (name) => {
@@ -184,6 +189,7 @@ export default function App() {
     openSheet: (name, params) => setSheet({ name, params, key: uid('s') }),
     replaceSheet: (name, params) => setSheet({ name, params, key: uid('s') }),
     closeSheet: () => setSheet(null),
+    confirm: (opts) => setConfirm(opts),
   };
 
   // open a wish when the partner's push notification is tapped
@@ -291,6 +297,17 @@ export default function App() {
 
         {/* draw-to-unlock gate */}
         {locked && <PatternLock onUnlock={nav.unlock} onDismiss={nav.dismissLock} />}
+
+        {/* confirmation dialog (delete wish/list, unpair, …) */}
+        <Confirm
+          open={!!confirm}
+          title={(confirm || confirmCache.current)?.title}
+          body={(confirm || confirmCache.current)?.body}
+          confirmLabel={(confirm || confirmCache.current)?.confirmLabel}
+          danger={(confirm || confirmCache.current)?.danger}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => { const f = (confirm || confirmCache.current)?.onConfirm; setConfirm(null); if (f) f(); }}
+        />
       </div>
     </AppCtx.Provider>
   );

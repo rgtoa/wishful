@@ -231,6 +231,26 @@ export function NewList({ secret: secretParam }) {
   );
 }
 
+// ───────────────────────────────── RENAME / EDIT LIST
+export function EditList({ listId }) {
+  const { nav, store } = useApp();
+  const list = store.lists.find(l => l.id === listId);
+  const [name, setName] = React.useState(list?.name || '');
+  if (!list) return null;
+  const save = () => { if (!name.trim()) return; store.renameList(listId, name.trim()); nav.closeSheet(); };
+  return (
+    <>
+      <SheetHead title="Rename list" onClose={() => nav.closeSheet()} doneLabel="Save" doneDisabled={!name.trim()} onDone={save} />
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '6px 18px 30px' }}>
+        <label style={fieldLabel}>List name</label>
+        <input value={name} onChange={e => setName(e.target.value)} autoFocus
+          onKeyDown={e => e.key === 'Enter' && save()}
+          style={{ ...inputStyle, fontSize: 17, fontWeight: 600 }} />
+      </div>
+    </>
+  );
+}
+
 // ───────────────────────────────── PARTNER LIST (secret reserve)
 export function PartnerList({ listId }) {
   const { nav, store } = useApp();
@@ -399,6 +419,7 @@ export function Profile() {
 
 // ───────────────────────────────── SYNC & NOTIFICATIONS (Profile card)
 function SyncCard({ store }) {
+  const { nav } = useApp();
   const [perm, setPerm] = React.useState(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
   const [busy, setBusy] = React.useState(false);
   const enable = async () => { setBusy(true); const res = await store.enableNotifications(); setBusy(false); setPerm(res === 'granted' ? 'granted' : (res === 'unsupported' ? 'unsupported' : 'denied')); };
@@ -412,7 +433,7 @@ function SyncCard({ store }) {
             {store.synced ? `Shared space · code ${store.space.code || '••••'}` : 'Connect with your partner on next unlock.'}
           </div>
         </div>
-        {store.synced && <button onClick={store.unpair} style={{ border: 'none', background: 'var(--surface2)', color: 'var(--ink-soft)', borderRadius: 999, padding: '7px 12px', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>Unpair</button>}
+        {store.synced && <button onClick={() => nav.confirm({ title: 'Unpair this device?', body: `You'll stop syncing with ${store.partner.name} and need a new code to reconnect. Your wishes stay safe on the server.`, confirmLabel: 'Unpair', danger: true, onConfirm: store.unpair })} style={{ border: 'none', background: 'var(--surface2)', color: 'var(--ink-soft)', borderRadius: 999, padding: '7px 12px', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>Unpair</button>}
       </div>
       {store.synced && perm !== 'granted' && (
         <button onClick={enable} disabled={busy || perm === 'unsupported'} style={{ width: '100%', border: 'none', cursor: perm === 'unsupported' ? 'default' : 'pointer',
@@ -510,7 +531,7 @@ export function ItemMenu({ itemId }) {
         {opt(<Ic.edit size={19} />, 'Edit details', () => nav.replaceSheet('AddItem', { itemId }))}
         {opt(<Ic.share size={19} />, 'Share item', () => nav.closeSheet())}
         {opt(<Ic.bookmark size={19} />, 'Move to another list', () => nav.closeSheet())}
-        {opt(<Ic.trash size={19} />, 'Delete', () => { store.deleteItem(itemId); nav.closeSheet(); nav.pop(); }, true)}
+        {opt(<Ic.trash size={19} />, 'Delete', () => nav.confirm({ title: 'Delete this wish?', body: 'It moves to Recently deleted for 30 days — you can restore it from your profile.', confirmLabel: 'Delete', danger: true, onConfirm: () => { store.deleteItem(itemId); nav.closeSheet(); nav.pop(); } }), true)}
       </div>
     </>
   );
@@ -529,9 +550,9 @@ export function ListMenu({ listId }) {
       <SheetHead title={l ? l.name : ''} onClose={() => nav.closeSheet()} />
       <div style={{ padding: '0 0 18px' }}>
         {opt(<Ic.plus size={19} />, 'Add an item', () => nav.replaceSheet('AddItem', { listId }))}
-        {opt(<Ic.edit size={19} />, 'Rename list', () => nav.closeSheet())}
+        {opt(<Ic.edit size={19} />, 'Rename list', () => nav.replaceSheet('EditList', { listId }))}
         {opt(<Ic.share size={19} />, 'Share list', () => nav.replaceSheet('Share'))}
-        {opt(<Ic.trash size={19} />, 'Delete list', () => nav.closeSheet(), true)}
+        {opt(<Ic.trash size={19} />, 'Delete list', () => nav.confirm({ title: 'Delete this list?', body: 'The list is removed and its wishes move to Recently deleted.', confirmLabel: 'Delete list', danger: true, onConfirm: () => { store.deleteList(listId); nav.closeSheet(); nav.pop(); } }), true)}
       </div>
     </>
   );
