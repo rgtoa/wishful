@@ -130,6 +130,22 @@ async function handler(req: Request): Promise<Response> {
       return json({ members: d.members, v: d.v });
     }
 
+    // remove this user from the space (on unpair) so the partner sees they left.
+    // Bumps version so the partner's poll picks it up.
+    if (path === '/pair/leave' && req.method === 'POST') {
+      const { spaceId, user } = await req.json().catch(() => ({}));
+      if (!spaceId || !user) return json({ error: 'bad request' }, 400);
+      const d = await getSpace(spaceId);
+      if (!d) return json({ error: 'not found' }, 404);
+      if (Array.isArray(d.members) && d.members.includes(user)) {
+        d.members = d.members.filter((m: string) => m !== user);
+        d.v = (d.v || 1) + 1;
+        d.updatedAt = Date.now();
+        await putSpace(spaceId, d);
+      }
+      return json({ members: d.members || [], v: d.v });
+    }
+
     // read shared state (cheap version check for polling)
     if (path === '/state' && req.method === 'GET') {
       const spaceId = url.searchParams.get('spaceId') || '';

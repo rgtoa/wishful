@@ -198,6 +198,7 @@ export default function App() {
     // unpair = leave the shared space, wipe this device's wishes/lists, and return
     // to the pairing screen. (Local only — it doesn't touch the partner's copy.)
     unpair: () => {
+      if (synced) api.leave(space.spaceId, currentUser); // tell the server we left so the partner sees it
       setLists([]); setItems([]); setNotifs([]);
       setSpace(null); setMembers([]);
       setStack([]); setSheet(null); setShowOnb(false); setShowSplash(false); setTab('Home');

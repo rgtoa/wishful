@@ -18,6 +18,7 @@ export const api = {
   pairNew: () => req('POST', '/pair/new'),
   pairJoin: (code) => req('POST', '/pair/join', { code }),
   presence: (spaceId, user) => req('POST', '/pair/presence', { spaceId, user }),
+  leave: (spaceId, user) => req('POST', '/pair/leave', { spaceId, user }),
   getState: (spaceId, v) => req('GET', `/state?spaceId=${encodeURIComponent(spaceId)}${v ? `&v=${v}` : ''}`),
   putState: (spaceId, baseV, doc) => req('PUT', '/state', { spaceId, baseV, ...doc }),
   subscribePush: (spaceId, user, subscription) => req('POST', '/push/subscribe', { spaceId, user, subscription }),
