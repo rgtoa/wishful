@@ -149,7 +149,6 @@ export default function App() {
     apiConfigured: API_CONFIGURED, synced, space, members,
     partnerJoined: members.includes(them),
     enableNotifications: () => synced ? enablePush(space.spaceId, currentUser) : Promise.resolve('unsupported'),
-    unpair: () => { setSpace(null); setMembers([]); },
   };
 
   // ── navigation / routing
@@ -196,6 +195,14 @@ export default function App() {
     replaceSheet: (name, params) => setSheet({ name, params, key: uid('s') }),
     closeSheet: () => setSheet(null),
     confirm: (opts) => setConfirm(opts),
+    // unpair = leave the shared space, wipe this device's wishes/lists, and return
+    // to the pairing screen. (Local only — it doesn't touch the partner's copy.)
+    unpair: () => {
+      setLists([]); setItems([]); setNotifs([]);
+      setSpace(null); setMembers([]);
+      setStack([]); setSheet(null); setShowOnb(false); setShowSplash(false); setTab('Home');
+      setShowPair(true);
+    },
   };
 
   // open a wish when the partner's push notification is tapped

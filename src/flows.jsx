@@ -445,7 +445,7 @@ function SyncCard({ store }) {
             {!store.synced ? 'Connect with your partner on next unlock.' : store.partnerJoined ? 'Synced with ' + store.partner.name : store.partner.name + " hasn't joined yet"}
           </div>
         </div>
-        {store.synced && <button onClick={() => nav.confirm({ title: 'Unpair this device?', body: `You'll stop syncing with ${store.partner.name} and need a new code to reconnect. Your wishes stay safe on the server.`, confirmLabel: 'Unpair', danger: true, onConfirm: store.unpair })} style={{ border: 'none', background: 'var(--surface2)', color: 'var(--ink-soft)', borderRadius: 999, padding: '7px 12px', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>Unpair</button>}
+        {store.synced && <button onClick={() => nav.confirm({ title: 'Unpair this device?', body: `Your wishes and lists on this device will be deleted forever, and you'll go back to the “Pair your two phones” screen. This can't be undone.`, confirmLabel: 'Unpair & erase', danger: true, onConfirm: nav.unpair })} style={{ border: 'none', background: 'var(--surface2)', color: 'var(--ink-soft)', borderRadius: 999, padding: '7px 12px', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>Unpair</button>}
       </div>
 
       {store.synced && !store.partnerJoined && store.space && store.space.code && (
